@@ -6,18 +6,20 @@ using System.Threading.Tasks;
 using Interface;
 using Orleans;
 using Orleans.Providers;
+using Orleans.Runtime;
 
 namespace Grains
 {
     [StorageProvider(ProviderName = "Storage")]
-    public class UserGrain : Grain<UserProperties>, IUser
+    public class UserGrain : Grain<UserProperties>, IUser, IRemindable
     {
         Random rand;
 
         public override Task OnActivateAsync()
         {
             rand = new Random(this.GetHashCode());
-            RegisterTimer(OnTimer, null, TimeSpan.FromSeconds(rand.Next(5)), TimeSpan.FromSeconds(5));
+            //RegisterTimer(OnTimer, null, TimeSpan.FromSeconds(rand.Next(5)), TimeSpan.FromSeconds(5));
+            RegisterOrUpdateReminder("poke", TimeSpan.FromSeconds(rand.Next(60)), TimeSpan.FromSeconds(60));
             return base.OnActivateAsync();
         }
 
@@ -74,6 +76,11 @@ namespace Grains
         {
             Console.WriteLine($"[{this.GetPrimaryKeyString()}] User {user.GetPrimaryKeyString()} poked me with '{message}'");
             return Task.CompletedTask;
+        }
+
+        public Task ReceiveReminder(string reminderName, TickStatus status)
+        {
+            return OnTimer(null);
         }
     }
 }
