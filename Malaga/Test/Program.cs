@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -14,7 +15,52 @@ namespace Test
 {
     class Program
     {
+        static string connectionString = "UseDevelopmentStorage=true";
+
         static void Main(string[] args)
+        {
+            var clusterId = Guid.NewGuid().ToString();
+            StartAzureTableSilo(1, clusterId);
+            StartAzureTableSilo(2, clusterId);
+            var client = StartAzureTableClient(clusterId);
+
+            Test(client).Wait();
+
+            Console.WriteLine("Press Enter to close.");
+            Console.ReadLine();
+        }
+
+        public static void StartAzureTableSilo(int index, string clusterId)
+        {
+            var siloConfig = ClusterConfiguration.LocalhostPrimarySilo(11110+index, 29999+index);
+            siloConfig.Globals.LivenessType = GlobalConfiguration.LivenessProviderType.AzureTable;
+            siloConfig.Globals.ReminderServiceType = GlobalConfiguration.ReminderServiceProviderType.AzureTable;
+            siloConfig.Globals.DataConnectionString = connectionString;
+            siloConfig.Globals.DeploymentId = clusterId;
+
+            siloConfig.Defaults.DefaultTraceLevel = Severity.Warning;
+            var silo = new SiloHost("Test Silo", siloConfig);
+            silo.InitializeOrleansSilo();
+            silo.StartOrleansSilo();
+
+            Console.WriteLine($"Silo {index} started.");
+        }
+
+        public static IClusterClient StartAzureTableClient(string clusterId)
+        {
+            var clientConfig = ClientConfiguration.LocalhostSilo();
+            clientConfig.GatewayProvider = ClientConfiguration.GatewayProviderType.AzureTable;
+            clientConfig.DataConnectionString = connectionString;
+            clientConfig.DeploymentId = clusterId;
+
+            var client = new ClientBuilder().UseConfiguration(clientConfig).Build();
+            client.Connect().Wait();
+
+            Console.WriteLine("Client connected.");
+            return client;
+        }
+
+        public static IClusterClient InitializeLocalSiloAndClient()
         {
             var siloConfig = ClusterConfiguration.LocalhostPrimarySilo();
             siloConfig.Defaults.DefaultTraceLevel = Severity.Warning;
@@ -29,11 +75,7 @@ namespace Test
             client.Connect().Wait();
 
             Console.WriteLine("Client connected.");
-
-            Test(client).Wait();
-
-            Console.WriteLine("Press Enter to close.");
-            Console.ReadLine();
+            return client;
         }
 
         public static async Task Test(IClusterClient client)
@@ -57,7 +99,7 @@ namespace Test
 
             var sw = Stopwatch.StartNew();
 
-            for (int i = 1; i <= 100; i++)
+            for (int i = 1; i <= 10; i++)
             {
                 var user = client.GetGrain<IUser>($"user{i}@outlook.com");
                 await user.SetName($"User #{i}");
@@ -73,7 +115,7 @@ namespace Test
 
             sw.Restart();
             var tasks = new List<Task>();
-            for (int j = 101; j <= 200; j++)
+            for (int j = 101; j <= 20; j++)
             {
                 var user = client.GetGrain<IUser>($"user{j}@outlook.com");
                 tasks.Add(user.SetName($"User #{j}"));

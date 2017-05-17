@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Interface;
 using Orleans;
 
@@ -35,7 +37,12 @@ namespace Grains
 
         public async Task<bool> AddFriend(IUser friend)
         {
+            //var t1 = Thread.CurrentThread.Name;
             var ok = await friend.InviteFriend(this);
+            //var t2 = Thread.CurrentThread.Name;
+
+            //if(t1 != t2)
+            //    Console.WriteLine($"User {this.GetPrimaryKeyString()} detected a thread switch from {t1} to {t2}.");
             if (!ok)
                 return false;
             if (!_props.Friends.Contains(friend))
