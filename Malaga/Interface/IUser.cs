@@ -36,5 +36,6 @@ namespace Interface
 
         Task<bool> InviteFriend(IUser friend);
         Task<bool> AddFriend(IUser friend);
+        Task Poke(IUser user, string message);
     }
 }

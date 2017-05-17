@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Interface;
@@ -10,6 +12,24 @@ namespace Grains
     [StorageProvider(ProviderName = "Storage")]
     public class UserGrain : Grain<UserProperties>, IUser
     {
+        Random rand;
+
+        public override Task OnActivateAsync()
+        {
+            rand = new Random(this.GetHashCode());
+            RegisterTimer(OnTimer, null, TimeSpan.FromSeconds(rand.Next(5)), TimeSpan.FromSeconds(5));
+            return base.OnActivateAsync();
+        }
+
+        private async Task OnTimer(object state)
+        {
+            if (State.Friends.Count > 0)
+            {
+                var friend = State.Friends.ToList()[rand.Next(State.Friends.Count)];
+                await friend.Poke(this, "I'm bored!");
+            }
+        }
+
         public Task SetName(string name)
         {
             State.Name = name;
@@ -48,6 +68,12 @@ namespace Grains
             await WriteStateAsync();
 
             return true;
+        }
+
+        public Task Poke(IUser user, string message)
+        {
+            Console.WriteLine($"[{this.GetPrimaryKeyString()}] User {user.GetPrimaryKeyString()} poked me with '{message}'");
+            return Task.CompletedTask;
         }
     }
 }
