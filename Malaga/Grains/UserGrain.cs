@@ -3,50 +3,50 @@ using System.Threading;
 using System.Threading.Tasks;
 using Interface;
 using Orleans;
+using Orleans.Providers;
 
 namespace Grains
 {
-    public class UserGrain : Grain, IUser
+    [StorageProvider(ProviderName = "Storage")]
+    public class UserGrain : Grain<UserProperties>, IUser
     {
-        private UserProperties _props = new UserProperties();
-
         public Task SetName(string name)
         {
-            _props.Name = name;
-            return Task.CompletedTask;
+            State.Name = name;
+            return WriteStateAsync();
         }
 
         public Task SetStatus(string status)
         {
-            _props.Status = status;
-            return Task.CompletedTask;
+            State.Status = status;
+            return WriteStateAsync();
         }
 
         public Task<UserProperties> GetProperties()
         {
-            return Task.FromResult(_props);
+            return Task.FromResult(State);
         }
 
-        public Task<bool> InviteFriend(IUser friend)
+        public async Task<bool> InviteFriend(IUser friend)
         {
-            if (!_props.Friends.Contains(friend))
-                _props.Friends.Add(friend);
+            if (!State.Friends.Contains(friend))
+                State.Friends.Add(friend);
 
-            return Task.FromResult(true);
+            await WriteStateAsync();
+
+            return true;
         }
 
         public async Task<bool> AddFriend(IUser friend)
         {
-            //var t1 = Thread.CurrentThread.Name;
             var ok = await friend.InviteFriend(this);
-            //var t2 = Thread.CurrentThread.Name;
-
-            //if(t1 != t2)
-            //    Console.WriteLine($"User {this.GetPrimaryKeyString()} detected a thread switch from {t1} to {t2}.");
-            if (!ok)
+             if (!ok)
                 return false;
-            if (!_props.Friends.Contains(friend))
-                _props.Friends.Add(friend);
+            if (!State.Friends.Contains(friend))
+                State.Friends.Add(friend);
+
+            await WriteStateAsync();
+
             return true;
         }
     }

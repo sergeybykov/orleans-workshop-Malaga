@@ -21,7 +21,7 @@ namespace Test
         {
             var clusterId = Guid.NewGuid().ToString();
             StartAzureTableSilo(1, clusterId);
-            StartAzureTableSilo(2, clusterId);
+            //StartAzureTableSilo(2, clusterId);
             var client = StartAzureTableClient(clusterId);
 
             Test(client).Wait();
@@ -37,6 +37,7 @@ namespace Test
             siloConfig.Globals.ReminderServiceType = GlobalConfiguration.ReminderServiceProviderType.AzureTable;
             siloConfig.Globals.DataConnectionString = connectionString;
             siloConfig.Globals.DeploymentId = clusterId;
+            siloConfig.AddAzureTableStorageProvider("Storage", connectionString);
 
             siloConfig.Defaults.DefaultTraceLevel = Severity.Warning;
             var silo = new SiloHost("Test Silo", siloConfig);
@@ -81,23 +82,26 @@ namespace Test
         public static async Task Test(IClusterClient client)
         {
             var mark = client.GetGrain<IUser>("mark@fb.com");
-            await mark.SetName("Mark");
-            await mark.SetStatus("Share your life with me!");
-
             var jack = client.GetGrain<IUser>("jack@twitter.com");
-            await jack.SetName("Jack");
-            await jack.SetStatus("Tweet me!");
+
+            //await PopulateUsers(client, mark, jack);
 
             var props = await mark.GetProperties();
             Console.WriteLine($"Mark: {props}");
             props = await jack.GetProperties();
             Console.WriteLine($"Jack: {props}");
 
-            var ok = await mark.AddFriend(jack);
-            if(ok)
-                Console.WriteLine("Mark added Jack as a friend.");
+        }
 
-            var sw = Stopwatch.StartNew();
+        public static async Task PopulateUsers(IClusterClient client, IUser mark, IUser jack)
+        {
+            await mark.SetName("Mark");
+            await mark.SetStatus("Share your life with me!");
+
+            await jack.SetName("Jack");
+            await jack.SetStatus("Tweet me!");
+
+            await mark.AddFriend(jack);
 
             for (int i = 1; i <= 10; i++)
             {
@@ -105,15 +109,8 @@ namespace Test
                 await user.SetName($"User #{i}");
                 await user.SetStatus((i % 3 == 0) ? "Sad" : "Happy");
                 await ((i % 2 == 0) ? mark : jack).AddFriend(user);
-                //var p = await user.GetProperties();
-                //Console.WriteLine($"{p}");
             }
 
-            sw.Stop();
-
-            Console.WriteLine($"Serial elapsed: {sw.ElapsedMilliseconds}");
-
-            sw.Restart();
             var tasks = new List<Task>();
             for (int j = 101; j <= 20; j++)
             {
@@ -121,15 +118,9 @@ namespace Test
                 tasks.Add(user.SetName($"User #{j}"));
                 tasks.Add(user.SetStatus((j % 3 == 0) ? "Sad" : "Happy"));
                 tasks.Add(((j % 2 == 0) ? mark : jack).AddFriend(user));
-                //var p = await user.GetProperties();
             }
 
             await Task.WhenAll(tasks);
-
-            sw.Stop();
-
-
-            Console.WriteLine($"Parallel elapsed: {sw.ElapsedMilliseconds}");
         }
     }
 }
