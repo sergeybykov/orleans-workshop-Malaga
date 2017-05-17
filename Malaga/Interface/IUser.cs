@@ -11,10 +11,20 @@ namespace Interface
     {
         public string Name { get; set; }
         public string Status { get; set; }
+        public HashSet<IUser> Friends { get; set; }
+
+        public UserProperties()
+        {
+            Friends = new HashSet<IUser>();
+        }
 
         public override string ToString()
         {
-            return $"Name='{Name}' Status='{Status}";
+            string friends = "";
+            foreach (var friend in Friends)
+                friends += $"{friend.GetPrimaryKeyString()}, ";
+
+            return $"Name='{Name}' Status='{Status}' Friends: {friends}";
         }
     }
     public interface IUser : IGrainWithStringKey
@@ -23,5 +33,8 @@ namespace Interface
         Task SetStatus(string status);
 
         Task<UserProperties> GetProperties();
+
+        Task<bool> InviteFriend(IUser friend);
+        Task<bool> AddFriend(IUser friend);
     }
 }
