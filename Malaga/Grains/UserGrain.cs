@@ -19,7 +19,8 @@ namespace Grains
         {
             rand = new Random(this.GetHashCode());
             //RegisterTimer(OnTimer, null, TimeSpan.FromSeconds(rand.Next(5)), TimeSpan.FromSeconds(5));
-            RegisterOrUpdateReminder("poke", TimeSpan.FromSeconds(rand.Next(60)), TimeSpan.FromSeconds(60));
+            //RegisterOrUpdateReminder("poke", TimeSpan.FromSeconds(rand.Next(60)), TimeSpan.FromSeconds(60));
+            
             return base.OnActivateAsync();
         }
 
@@ -44,9 +45,17 @@ namespace Grains
             return WriteStateAsync();
         }
 
-        public Task<UserProperties> GetProperties()
+        public async Task<UserProperties> GetProperties()
         {
-            return Task.FromResult(State);
+            var rId = RequestContext.Get("requestId");
+            if (rId != null)
+                Console.WriteLine($"[GetProperties] {rId}");
+
+            RequestContext.Set("requestId", rId + "abc");
+
+            await State.Friends.ToList()[1].Poke(this, "testing");
+            
+            return State;
         }
 
         public async Task<bool> InviteFriend(IUser friend)
@@ -74,6 +83,10 @@ namespace Grains
 
         public Task Poke(IUser user, string message)
         {
+            var rId = RequestContext.Get("requestId");
+            if(rId != null)
+                Console.WriteLine($"[Poke] {rId}");
+
             Console.WriteLine($"[{this.GetPrimaryKeyString()}] User {user.GetPrimaryKeyString()} poked me with '{message}'");
             return Task.CompletedTask;
         }

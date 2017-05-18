@@ -10,6 +10,7 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Runtime.Configuration;
 using Orleans.Runtime.Host;
+using OrleansDashboard;
 
 namespace Test
 {
@@ -87,7 +88,10 @@ namespace Test
 
             //await PopulateUsers(client, mark, jack);
 
+            RequestContext.Set("requestId", "xyz");
             var props = await mark.GetProperties();
+            RequestContext.Set("requestId", null);
+
             Console.WriteLine($"Mark: {props}");
             props = await jack.GetProperties();
             Console.WriteLine($"Jack: {props}");
