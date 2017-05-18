@@ -38,7 +38,8 @@ namespace Test
             siloConfig.Globals.DataConnectionString = connectionString;
             siloConfig.Globals.DeploymentId = clusterId;
             siloConfig.AddAzureTableStorageProvider("Storage", connectionString);
-
+            if(index == 1)
+                siloConfig.Globals.RegisterDashboard();
             siloConfig.Defaults.DefaultTraceLevel = Severity.Warning;
             var silo = new SiloHost("Test Silo", siloConfig);
             silo.InitializeOrleansSilo();
